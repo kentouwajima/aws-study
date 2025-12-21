@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS Study - VPC and EC2 
+
+Resources:
+  # --------------------
+  # VPC作成
+  # --------------------
+  StudyVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: aws-study-vpc
+
+  # --------------------
+  # IGW作成
+  # --------------------
+  StudyIGW:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: aws-study-igw
+
+  # --------------------
+  # IGWのアタッチ
+  # --------------------
+  AttachIGW:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref StudyVPC
+      InternetGatewayId: !Ref StudyIGW
+
+  # --------------------
+  # Public Subnet（1a）
+  # --------------------
+  PublicSubnet1A:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref StudyVPC
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: ap-northeast-1a
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: aws-study-public-1a
+
+  # --------------------
+  # Private Subnet（1a）
+  # --------------------
+  PrivateSubnet1A:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref StudyVPC
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: ap-northeast-1a
+      Tags:
+        - Key: Name
+          Value: aws-study-private-1a
+
+  # --------------------
+  # Public Subnet（1c）
+  # --------------------
+  PublicSubnet1C:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref StudyVPC
+      CidrBlock: 10.0.11.0/24
+      AvailabilityZone: ap-northeast-1c
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: aws-study-public-1c
+
+  # --------------------
+  # Private Subnet（1c）
+  # --------------------
+  PrivateSubnet1C:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref StudyVPC
+      CidrBlock: 10.0.12.0/24
+      AvailabilityZone: ap-northeast-1c
+      Tags:
+        - Key: Name
+          Value: aws-study-private-1c
+          
+  # --------------------
+  # Route Tables
+  # --------------------
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref StudyVPC
+      Tags:
+        - Key: Name
+          Value: aws-study-vpc-rtb-public
+  PrivateRouteTable1A:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref StudyVPC
+      Tags:
+        - Key: Name
+          Value: aws-study-vpc-rtb-private-1a
+  PrivateRouteTable1C:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref StudyVPC
+      Tags:
+        - Key: Name
+          Value: aws-study-vpc-rtb-private-1c
+
+  # --------------------
+  # Routes
+  # --------------------
+  PublicRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref StudyIGW
+
+  # --------------------
+  # Route Table Associations
+  # --------------------
+  PublicSubnet1ARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1A
+      RouteTableId: !Ref PublicRouteTable
+  PublicSubnet1CRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1C
+      RouteTableId: !Ref PublicRouteTable
+  PrivateSubnet1ARouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1A
+      RouteTableId: !Ref PrivateRouteTable1A
+  PrivateSubnet1CRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1C
+      RouteTableId: !Ref PrivateRouteTable1C
+
+  # --------------------
+  # Security Group
+  # --------------------
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: EC2 SG
+      VpcId: !Ref StudyVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 8080
+          ToPort: 8080
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: aws-study-ec2-sg
+
+  # --------------------
+  # EC2
+  # --------------------
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Sub "{{resolve:ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-6.1-x86_64}}"
+      InstanceType: t3.micro
+      KeyName: kentouwajima
+      SubnetId: !Ref PublicSubnet1A
+      SecurityGroupIds:
+        - !Ref EC2SecurityGroup
+      Tags:
+        - Key: Name
+          Value: aws-study-ec2
+
