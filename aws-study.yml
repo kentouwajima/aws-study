@@ -1,6 +1,12 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: AWS Study - VPC and EC2 
 
+Parameters:
+  AllowedSshCidr:
+    Type: String
+    Description: Your global IP address for SSH access (e.g. xxx.xxx.xxx.xxx/32)
+
+
 Resources:
   # --------------------
   # VPC作成
@@ -159,7 +165,7 @@ Resources:
         - IpProtocol: tcp
           FromPort: 22
           ToPort: 22
-          CidrIp: 0.0.0.0/0
+          CidrIp: !Ref AllowedSshCidr
         - IpProtocol: tcp
           FromPort: 80
           ToPort: 80
